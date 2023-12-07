@@ -1,21 +1,16 @@
-use seals::txout::ExplicitSeal;
-use strict_encoding::{StrictDeserialize, TypeName};
-use std::{collections::HashMap, str::FromStr};
-use indexmap::IndexMap;
+use crate::invoice::{Beneficiary, InvoiceState, RgbInvoice, RgbTransport};
 use amplify::{Display, Error, From};
-use rgbstd::{
-    containers::{Bindle, Transfer},
-    contract::{GraphSeal},
-    interface::TypedState,
-    persistence::{Inventory, Stash, Stock},
-    resolvers::ResolveHeight,
-    validation::{ ConsignmentApi, ResolveTx, Status,},
-};
-use rgb::ContractId;
-use bp::{seals::txout::CloseMethod, Txid};
-use bpstd::{ Outpoint};
+use bp::seals::txout::CloseMethod;
+use bpstd::Outpoint;
+use indexmap::IndexMap;
 use invoice::Network;
-use crate::invoice::{InvoiceState, RgbInvoice, RgbTransport,Beneficiary};
+use rgb::ContractId;
+use rgbstd::{
+    contract::GraphSeal,
+    persistence::{Stash, Stock},
+};
+use std::{collections::HashMap, str::FromStr};
+use strict_encoding::TypeName;
 
 #[derive(Clone, Eq, PartialEq, Debug, Display, Error, From)]
 #[display(doc_comments)]
@@ -40,7 +35,7 @@ pub fn create_invoice(
     contract_id: &str,
     iface: &str,
     amount: u64,
-    outpoint:&Outpoint,
+    outpoint: &Outpoint,
     params: HashMap<String, String>,
     stock: &mut Stock,
 ) -> Result<RgbInvoice, NewInvoiceError> {
@@ -62,20 +57,14 @@ pub fn create_invoice(
     //     return Err(NewInvoiceError::NoContract(contract_id.to_string()));
     // };
 
-
     // let seal = ExplicitSeal::<Txid>::from_str(seal)
     //     .map_err(|_| NewInvoiceError::WrongIface(seal.to_string()))?;
     // let seal = GraphSeal::new(seal.method.into(), seal.txid, seal.vout);
     // // Query Params
 
-            let seal = GraphSeal::new(
-                CloseMethod::TapretFirst,
-                outpoint.txid,
-                outpoint.vout,
-            );
+    let seal = GraphSeal::new(CloseMethod::TapretFirst, outpoint.txid, outpoint.vout);
 
-    let beneficiary=Beneficiary::BlindedSeal(seal.to_concealed_seal());
-
+    let beneficiary = Beneficiary::BlindedSeal(seal.to_concealed_seal());
 
     let mut query = IndexMap::default();
     for (k, v) in params {

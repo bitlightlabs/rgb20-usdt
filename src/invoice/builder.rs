@@ -19,8 +19,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::str::FromStr;
 use amplify::none;
+use std::str::FromStr;
 
 use invoice::Network;
 use rgb::ContractId;
@@ -168,5 +168,7 @@ impl RgbInvoiceBuilder {
         self
     }
 
-    pub fn finish(self) -> RgbInvoice { self.0 }
+    pub fn finish(self) -> RgbInvoice {
+        self.0
+    }
 }

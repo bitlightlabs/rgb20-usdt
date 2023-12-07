@@ -19,10 +19,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use amplify::{Display, Error, From};
 use std::fmt::{self, Debug, Display, Formatter};
 use std::num::ParseIntError;
 use std::str::FromStr;
-use amplify::{Display, Error, From};
 
 use fluent_uri::enc::EStr;
 use fluent_uri::Uri;
@@ -129,9 +129,9 @@ pub enum InvoiceParseError {
 
 impl RgbInvoice {
     fn has_params(&self) -> bool {
-        self.expiry.is_some() ||
-            self.transports != vec![RgbTransport::UnspecifiedMeans] ||
-            !self.unknown_query.is_empty()
+        self.expiry.is_some()
+            || self.transports != vec![RgbTransport::UnspecifiedMeans]
+            || !self.unknown_query.is_empty()
     }
 
     fn query_params(&self) -> IndexMap<String, String> {
@@ -144,7 +144,10 @@ impl RgbInvoice {
             for transport in self.transports.clone() {
                 transports.push(transport.to_string());
             }
-            query_params.insert(ENDPOINTS.to_string(), transports.join(&TRANSPORT_SEP.to_string()));
+            query_params.insert(
+                ENDPOINTS.to_string(),
+                transports.join(&TRANSPORT_SEP.to_string()),
+            );
         }
         query_params.extend(self.unknown_query.clone());
         query_params
@@ -276,7 +279,11 @@ impl FromStr for RgbInvoice {
         let contract = match ContractId::from_str(contract_id_str) {
             Ok(cid) => Some(cid),
             Err(_) if contract_id_str == &OMITTED.to_string() => None,
-            Err(_) => return Err(InvoiceParseError::InvalidContractId(contract_id_str.clone())),
+            Err(_) => {
+                return Err(InvoiceParseError::InvalidContractId(
+                    contract_id_str.clone(),
+                ))
+            }
         };
         next_path_index += 1;
 
@@ -299,20 +306,22 @@ impl FromStr for RgbInvoice {
             _ => return Err(InvoiceParseError::Invalid),
         };
 
-        let beneficiary =
-            match (SecretSeal::from_str(beneficiary_str), Address::from_str(beneficiary_str)) {
-                (Ok(seal), Err(_)) => Beneficiary::BlindedSeal(seal),
-                (Err(_), Ok(addr)) => {
-                    address_network = Some(addr.network);
-                    Beneficiary::WitnessUtxo(addr)
-                }
-                (Err(_), Err(_)) => {
-                    return Err(InvoiceParseError::Beneficiary(beneficiary_str.to_owned()));
-                }
-                (Ok(_), Ok(_)) => {
-                    panic!("found a string which is both valid bitcoin address and UTXO blind seal")
-                }
-            };
+        let beneficiary = match (
+            SecretSeal::from_str(beneficiary_str),
+            Address::from_str(beneficiary_str),
+        ) {
+            (Ok(seal), Err(_)) => Beneficiary::BlindedSeal(seal),
+            (Err(_), Ok(addr)) => {
+                address_network = Some(addr.network);
+                Beneficiary::WitnessUtxo(addr)
+            }
+            (Err(_), Err(_)) => {
+                return Err(InvoiceParseError::Beneficiary(beneficiary_str.to_owned()));
+            }
+            (Ok(_), Ok(_)) => {
+                panic!("found a string which is both valid bitcoin address and UTXO blind seal")
+            }
+        };
 
         let mut query_params = map_query_params(&uri)?;
 
@@ -449,13 +458,19 @@ mod test {
                            100+utxob:egXsFnw-5Eud7WKYn-7DVQvcPbc-rR69YmgmG-veacwmUFo-uMFKFb?\
                            expiry=six";
         let result = RgbInvoice::from_str(invoice_str);
-        assert!(matches!(result, Err(InvoiceParseError::InvalidExpiration(_))));
+        assert!(matches!(
+            result,
+            Err(InvoiceParseError::InvalidExpiration(_))
+        ));
 
         // with bad query parameter
         let invoice_str = "rgb:2WBcas9-yjzEvGufY-9GEgnyMj7-beMNMWA8r-sPHtV1nPU-TMsGMQX/RGB20/\
                            100+utxob:egXsFnw-5Eud7WKYn-7DVQvcPbc-rR69YmgmG-veacwmUFo-uMFKFb?expiry";
         let result = RgbInvoice::from_str(invoice_str);
-        assert!(matches!(result, Err(InvoiceParseError::InvalidQueryParam(_))));
+        assert!(matches!(
+            result,
+            Err(InvoiceParseError::InvalidQueryParam(_))
+        ));
 
         // with an unknown query parameter
         let invoice_str = "rgb:2WBcas9-yjzEvGufY-9GEgnyMj7-beMNMWA8r-sPHtV1nPU-TMsGMQX/RGB20/\
@@ -485,9 +500,10 @@ mod test {
         let query_key_decoded = ":@- #";
         let query_val_encoded = "?/.%26%3D";
         let query_val_decoded = "?/.&=";
-        let invoice =
-            RgbInvoice::from_str(&format!("{invoice_base}{query_key_encoded}={query_val_encoded}"))
-                .unwrap();
+        let invoice = RgbInvoice::from_str(&format!(
+            "{invoice_base}{query_key_encoded}={query_val_encoded}"
+        ))
+        .unwrap();
         let query_params = invoice.query_params();
         assert_eq!(query_params[query_key_decoded], query_val_decoded);
         assert_eq!(
@@ -512,31 +528,43 @@ mod test {
                            100+utxob:egXsFnw-5Eud7WKYn-7DVQvcPbc-rR69YmgmG-veacwmUFo-uMFKFb?\
                            endpoints=";
         let result = RgbInvoice::from_str(invoice_str);
-        assert!(matches!(result, Err(InvoiceParseError::InvalidQueryParam(_))));
+        assert!(matches!(
+            result,
+            Err(InvoiceParseError::InvalidQueryParam(_))
+        ));
 
         // invalid transport endpoint specification
         let invoice_str = "rgb:2WBcas9-yjzEvGufY-9GEgnyMj7-beMNMWA8r-sPHtV1nPU-TMsGMQX/RGB20/\
                            100+utxob:egXsFnw-5Eud7WKYn-7DVQvcPbc-rR69YmgmG-veacwmUFo-uMFKFb?\
                            endpoints=bad";
         let result = RgbInvoice::from_str(invoice_str);
-        assert!(matches!(result, Err(InvoiceParseError::InvalidQueryParam(_))));
+        assert!(matches!(
+            result,
+            Err(InvoiceParseError::InvalidQueryParam(_))
+        ));
 
         // invalid transport variant
         let invoice_str = "rgb:2WBcas9-yjzEvGufY-9GEgnyMj7-beMNMWA8r-sPHtV1nPU-TMsGMQX/RGB20/\
                            100+utxob:egXsFnw-5Eud7WKYn-7DVQvcPbc-rR69YmgmG-veacwmUFo-uMFKFb?\
                            endpoints=rpca://host.example.com";
         let result = RgbInvoice::from_str(invoice_str);
-        assert!(matches!(result, Err(InvoiceParseError::InvalidQueryParam(_))));
+        assert!(matches!(
+            result,
+            Err(InvoiceParseError::InvalidQueryParam(_))
+        ));
 
         // rgb-rpc variant
         let invoice_str = "rgb:2WBcas9-yjzEvGufY-9GEgnyMj7-beMNMWA8r-sPHtV1nPU-TMsGMQX/RGB20/\
                            100+utxob:egXsFnw-5Eud7WKYn-7DVQvcPbc-rR69YmgmG-veacwmUFo-uMFKFb?\
                            endpoints=rpc://host.example.com";
         let invoice = RgbInvoice::from_str(invoice_str).unwrap();
-        assert_eq!(invoice.transports, vec![RgbTransport::JsonRpc {
-            tls: false,
-            host: "host.example.com".to_string()
-        }]);
+        assert_eq!(
+            invoice.transports,
+            vec![RgbTransport::JsonRpc {
+                tls: false,
+                host: "host.example.com".to_string()
+            }]
+        );
         assert_eq!(invoice.to_string(), invoice_str);
 
         // rgb-rpc variant, host containing authentication, "-" characters and port
@@ -544,10 +572,13 @@ mod test {
                            100+utxob:egXsFnw-5Eud7WKYn-7DVQvcPbc-rR69YmgmG-veacwmUFo-uMFKFb?\
                            endpoints=rpcs://user:pass@host-1.ex-ample.com:1234";
         let invoice = RgbInvoice::from_str(invoice_str).unwrap();
-        assert_eq!(invoice.transports, vec![RgbTransport::JsonRpc {
-            tls: true,
-            host: "user:pass@host-1.ex-ample.com:1234".to_string()
-        }]);
+        assert_eq!(
+            invoice.transports,
+            vec![RgbTransport::JsonRpc {
+                tls: true,
+                host: "user:pass@host-1.ex-ample.com:1234".to_string()
+            }]
+        );
         assert_eq!(invoice.to_string(), invoice_str);
 
         // rgb-rpc variant, IPv6 host
@@ -555,10 +586,13 @@ mod test {
                            100+utxob:egXsFnw-5Eud7WKYn-7DVQvcPbc-rR69YmgmG-veacwmUFo-uMFKFb?\
                            endpoints=rpcs://%5B2001:db8::1%5D:1234";
         let invoice = RgbInvoice::from_str(invoice_str).unwrap();
-        assert_eq!(invoice.transports, vec![RgbTransport::JsonRpc {
-            tls: true,
-            host: "[2001:db8::1]:1234".to_string()
-        }]);
+        assert_eq!(
+            invoice.transports,
+            vec![RgbTransport::JsonRpc {
+                tls: true,
+                host: "[2001:db8::1]:1234".to_string()
+            }]
+        );
         assert_eq!(invoice.to_string(), invoice_str);
 
         // rgb-rpc variant with missing host
@@ -566,14 +600,20 @@ mod test {
                            100+utxob:egXsFnw-5Eud7WKYn-7DVQvcPbc-rR69YmgmG-veacwmUFo-uMFKFb?\
                            endpoints=rpc://";
         let result = RgbInvoice::from_str(invoice_str);
-        assert!(matches!(result, Err(InvoiceParseError::InvalidQueryParam(_))));
+        assert!(matches!(
+            result,
+            Err(InvoiceParseError::InvalidQueryParam(_))
+        ));
 
         // rgb-rpc variant with invalid separator
         let invoice_str = "rgb:2WBcas9-yjzEvGufY-9GEgnyMj7-beMNMWA8r-sPHtV1nPU-TMsGMQX/RGB20/\
                            100+utxob:egXsFnw-5Eud7WKYn-7DVQvcPbc-rR69YmgmG-veacwmUFo-uMFKFb?\
                            endpoints=rpc/host.example.com";
         let result = RgbInvoice::from_str(invoice_str);
-        assert!(matches!(result, Err(InvoiceParseError::InvalidQueryParam(_))));
+        assert!(matches!(
+            result,
+            Err(InvoiceParseError::InvalidQueryParam(_))
+        ));
 
         // rgb-rpc variant with invalid transport host specification
         let invoice_str = "rgb:2WBcas9-yjzEvGufY-9GEgnyMj7-beMNMWA8r-sPHtV1nPU-TMsGMQX/RGB20/\
@@ -634,22 +674,37 @@ mod test {
 
         // empty transport parse error
         let result = RgbTransport::from_str("");
-        assert!(matches!(result, Err(TransportParseError::InvalidTransport(_))));
+        assert!(matches!(
+            result,
+            Err(TransportParseError::InvalidTransport(_))
+        ));
 
         // invalid transport parse error
         let result = RgbTransport::from_str("bad");
-        assert!(matches!(result, Err(TransportParseError::InvalidTransport(_))));
+        assert!(matches!(
+            result,
+            Err(TransportParseError::InvalidTransport(_))
+        ));
 
         // invalid transport variant parse error
         let result = RgbTransport::from_str("rpca://host.example.com");
-        assert!(matches!(result, Err(TransportParseError::InvalidTransport(_))));
+        assert!(matches!(
+            result,
+            Err(TransportParseError::InvalidTransport(_))
+        ));
 
         // rgb-rpc variant with missing host parse error
         let result = RgbTransport::from_str("rpc://");
-        assert!(matches!(result, Err(TransportParseError::InvalidTransportHost(_))));
+        assert!(matches!(
+            result,
+            Err(TransportParseError::InvalidTransportHost(_))
+        ));
 
         // rgb-rpc variant with invalid separator parse error
         let result = RgbTransport::from_str("rpc/host.example.com");
-        assert!(matches!(result, Err(TransportParseError::InvalidTransport(_))));
+        assert!(matches!(
+            result,
+            Err(TransportParseError::InvalidTransport(_))
+        ));
     }
 }

@@ -37,5 +37,8 @@ chrono = "0.4.24"
 commit_verify = { version = "0.10.6", features = ["stl"] }
 bp-invoice = { version = "0.11.0-beta.2" }
 bp-util = "0.11.0-beta.2"
+cargo-watch = "8.4.1"
+#rgb-invoice = { git = "https://github.com/RGB-WG/rgb-std", branch = "v0.11"}
 [patch.crates-io]
 bp-invoice = { git = "https://github.com/BP-WG/bp-std", branch = "v0.11" }
+
