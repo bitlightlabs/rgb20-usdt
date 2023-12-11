@@ -37,39 +37,16 @@ with source code and build rgb-cli from source.
 First, clone it from Github:
 
 ```bash
-$ git clone https://github.com/RGB-WG/rgb.git rgb-cli
+$ git clone https://github.com/RGB-WG/rgb.git
 ```
 
 Then, build it to downloading the dependencies:
 
 ```
-$ cd rgb-cli
+$ cd rgb
 $ cargo build
+$ cargo install --all-features --path cli
 ```
-
-After that, locate `rgb-wallet` source codes path, for me, it's:
-`~/.cargo/registry/src/index.crates.io-6f17d22bba15001f/rgb-wallet-0.10.9/src`
-
-Comment out **line 157** in `pay.rs`:
-
-```rust
-                // .filter(|index| *index == RGB_NATIVE_DERIVATION_INDEX || *index == RGB_TAPRET_DERIVATION_INDEX)
-```
-
-Finally, install `rgb` command line:
-
-```
-$ cd rgb-cli
-$ cargo install rgb-contracts --all-features --force --path .
-```
-
-> For some reason, I failed with clone `rgb-wallet` lib source code and change
-> its dependencies in `rgb` source codes on local machine. I know I can fork
-> `rgb-wallet` into my repo, and modify it. Change `rgb` dependency to my repo,
-> but i believe there must be a way to do it on local. Also, cause I'm not sure
-> whether the `filter` is an issue or a feature. Therefore, I choose to make it
-> in some kind nasty way. If anyone has good ideas, please let me know.
-
 ## Create and import
 
 To create a RGB20 contract, just clone this repo to you local machine. Then
